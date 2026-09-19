@@ -1,0 +1,37 @@
+# Peticiones de prueba. Visual Studio y VS Code (extension REST Client) las
+# ejecutan con un clic en "Send Request".
+
+@api = http://localhost:5080
+
+### Salud: responde si la API esta levantada
+GET {{api}}/health
+
+### Negativa (2 estrellas): encaja con la regla y llega a la cola
+POST {{api}}/resenyas
+Content-Type: application/json
+
+{
+  "comentario": "El pedido llego tarde y roto. Nadie contesta al telefono.",
+  "calificacion": 2,
+  "email": "cliente.enfadado@ejemplo.com"
+}
+
+### Positiva (5 estrellas): la API la acepta, pero la regla la descarta
+POST {{api}}/resenyas
+Content-Type: application/json
+
+{
+  "comentario": "Todo perfecto, llego antes de tiempo.",
+  "calificacion": 5,
+  "email": "cliente.contento@ejemplo.com"
+}
+
+### Invalida: la validacion la para con un 400 antes de tocar AWS
+POST {{api}}/resenyas
+Content-Type: application/json
+
+{
+  "comentario": "x",
+  "calificacion": 9,
+  "email": "esto-no-es-un-correo"
+}

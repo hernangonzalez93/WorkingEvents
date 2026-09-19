@@ -1,0 +1,14 @@
+[
+  {
+    "Source": "workingevents.api",
+    "DetailType": "ResenyaEnviada",
+    "EventBusName": "workingevents-bus",
+    "Detail": "{\"id\": \"rev-001\", \"comentario\": \"El pedido llego con dos dias de retraso y el producto venia roto. Nadie responde al telefono. Pesimo servicio.\", \"calificacion\": 2, \"email\": \"cliente.enfadado@ejemplo.com\"}"
+  },
+  {
+    "Source": "workingevents.api",
+    "DetailType": "ResenyaEnviada",
+    "EventBusName": "workingevents-bus",
+    "Detail": "{\"id\": \"rev-002\", \"comentario\": \"Todo perfecto, llego antes de lo previsto y la calidad es excelente. Repetire seguro.\", \"calificacion\": 5, \"email\": \"cliente.contento@ejemplo.com\"}"
+  }
+]

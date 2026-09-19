@@ -1,0 +1,23 @@
+# Copia este fichero a terraform.tfvars y pon tu correo.
+# terraform.tfvars esta en .gitignore: no se versiona.
+
+# Cuenta de AWS donde debe crearse todo (12 digitos). El guardia de cuenta
+# detiene el plan si las credenciales apuntan a otra.
+expected_account_id = "123456789012"
+
+email_alertas = "tu-correo@ejemplo.com"
+
+# Opcionales, con valores por defecto razonables:
+
+# Calificacion maxima que se manda a analizar (1-5).
+# umbral_calificacion = 3
+
+# Interruptor general. A false, la regla deja de enrutar. Nada se destruye.
+# flujo_activo = true
+
+# Cita nocturna de apagado. Aqui no ahorra dinero (todo es de pago por uso);
+# tiene sentido a partir de la Fase 8, cuando la web y la API vivan en ECS.
+# apagado_nocturno = false
+
+# region      = "eu-west-1"
+# environment = "dev"
