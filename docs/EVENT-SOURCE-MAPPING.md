@@ -244,7 +244,8 @@ Las métricas de SQS llegan con **unos minutos de retraso**.
 Una sutileza con `Errors`: si falla un solo mensaje, como C en la simulación, **no cuenta como
 error**. Para Lambda, esa invocación terminó bien, porque `handler()` capturó la excepción y
 devolvió una respuesta normal. Los fallos de mensajes sueltos se ven en los logs y, al tercer
-fallo, en la DLQ. `Errors` solo sube si la función entera revienta.
+fallo, en la DLQ. `Errors` solo sube si la función entera revienta. Por eso hay una alarma para
+cada caso: ver [OBSERVABILIDAD](OBSERVABILIDAD.md#6-tres-redes-cada-una-para-un-fallo-distinto).
 
 ### 8.7 Sitio 5: los logs
 

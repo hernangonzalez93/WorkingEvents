@@ -27,6 +27,7 @@ Se siguen las del proyecto TestEnforce:
 | `cola.tf` | La cola principal, la de mensajes muertos y el permiso para EventBridge |
 | `eventos.tf` | El bus propio, la regla de filtrado y su destino |
 | `lambda.tf` | La función, su rol, sus permisos, sus logs y su conexión con la cola |
+| `alarmas.tf` | El topic de avisos técnicos, un filtro de métricas y tres alarmas |
 | `apagado.tf` | El interruptor general y el apagado nocturno opcional |
 | `outputs.tf` | Nada: los valores que se muestran después de aplicar |
 
@@ -262,7 +263,8 @@ regla.
 
 ## 10. `lambda.tf`
 
-Se explica entero en [LAMBDA](LAMBDA.md#7-la-infraestructura-lambdatf).
+Se explica entero en [LAMBDA](LAMBDA.md#7-la-infraestructura-lambdatf). Y `alarmas.tf`, en
+[OBSERVABILIDAD](OBSERVABILIDAD.md).
 
 ## 11. `outputs.tf`
 
@@ -291,3 +293,4 @@ Dos cosas que conviene saber sobre los planes guardados:
 |---|---|
 | 2 | 9: bus, regla, destino, dos colas, permiso de la cola, topic, suscripción y guardia |
 | 4 | 5: grupo de logs, rol, permisos, función y event source mapping |
+| 6 | 6: topic de operaciones, su suscripción, un filtro de métricas y tres alarmas. Además se actualizó la Lambda por un cambio de un comentario |

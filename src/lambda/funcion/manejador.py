@@ -39,6 +39,9 @@ def handler(event, context):
         try:
             procesar(registro)
         except Exception:
+            # OJO: infra/alarmas.tf busca este texto EXACTO en los logs para
+            # contar los fallos y hacer saltar una alarma. Si se cambia aqui,
+            # hay que cambiarlo alli, o la alarma dejara de enterarse.
             logger.exception("Fallo al procesar el mensaje %s", registro.get("messageId"))
             fallidos.append({"itemIdentifier": registro["messageId"]})
 

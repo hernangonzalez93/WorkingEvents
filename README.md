@@ -46,14 +46,14 @@ flowchart LR
 | 3 | API en .NET 10 | ✅ |
 | 4 | Lambda con analizador de sentimiento | ✅ probada de punta a punta |
 | 5 | Frontal en Next.js | ✅ |
-| 6 | Observabilidad: alarmas y cola de mensajes muertos | pendiente |
+| 6 | Observabilidad: alarmas y cola de mensajes muertos | ✅ probada provocando fallos |
 | 7 | Análisis con Claude: API de Anthropic y Secrets Manager | pendiente |
 | 8 | Hospedar la web y la API en AWS | pendiente |
 
 ## Estructura
 
 ```
-infra/            Terraform: bus, regla, colas, topic, Lambda e interruptor de apagado
+infra/            Terraform: bus, regla, colas, topics, Lambda, alarmas e interruptor de apagado
 src/api/          API en .NET 10 que publica las reseñas
 src/web/          Frontal en Next.js: el formulario de reseñas
 src/lambda/
@@ -81,6 +81,7 @@ Por orden de lectura:
 | [EVENT-SOURCE-MAPPING](docs/EVENT-SOURCE-MAPPING.md) | Cómo se comunican la cola y la Lambda, y dónde verlo en la consola |
 | [PRUEBA-DE-PUNTA-A-PUNTA](docs/PRUEBA-DE-PUNTA-A-PUNTA.md) | La prueba final y todo lo que enseñaron los logs |
 | [FRONTAL](docs/FRONTAL.md) | El formulario en Next.js, y CORS explicado desde cero |
+| [OBSERVABILIDAD](docs/OBSERVABILIDAD.md) | Tres alarmas, cómo se probaron provocando fallos, y qué hacer cuando salta la de la DLQ |
 
 ## Puesta en marcha
 

@@ -45,6 +45,20 @@ output "apagado_nocturno" {
   value       = var.apagado_nocturno ? "${var.apagado_cron} (${var.apagado_zona_horaria})" : "desactivado"
 }
 
+output "topic_operaciones" {
+  description = "ARN del topic de las alarmas tecnicas."
+  value       = aws_sns_topic.operaciones.arn
+}
+
+output "alarmas" {
+  description = "Las tres alarmas, de la mas temprana a la ultima red."
+  value = [
+    aws_cloudwatch_metric_alarm.mensajes_fallidos.alarm_name,
+    aws_cloudwatch_metric_alarm.errores_lambda.alarm_name,
+    aws_cloudwatch_metric_alarm.dlq_con_mensajes.alarm_name,
+  ]
+}
+
 output "funcion_analizador" {
   description = "Nombre de la Lambda."
   value       = aws_lambda_function.analizador.function_name

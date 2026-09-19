@@ -7,6 +7,9 @@ expected_account_id = "123456789012"
 
 email_alertas = "tu-correo@ejemplo.com"
 
+# Opcional: otro correo para las alarmas tecnicas. Si no se pone, van al de arriba.
+# email_operaciones = "operaciones@ejemplo.com"
+
 # Opcionales, con valores por defecto razonables:
 
 # Calificacion maxima que se manda a analizar (1-5).

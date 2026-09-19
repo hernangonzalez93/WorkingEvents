@@ -53,6 +53,19 @@ variable "email_alertas" {
   sensitive   = true
 }
 
+variable "email_operaciones" {
+  description = <<-EOT
+    Correo que recibe las ALARMAS TECNICAS (alarmas.tf): mensajes que fallan,
+    errores de la Lambda, mensajes en la DLQ.
+
+    Vacio por defecto: entonces se usa el mismo que email_alertas. Existe para
+    poder separar los dos avisos cuando lleguen a personas distintas.
+  EOT
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "umbral_calificacion" {
   description = <<-EOT
     Calificacion maxima que se considera "sospechosa" y se manda a analizar.

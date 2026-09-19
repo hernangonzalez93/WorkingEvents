@@ -1,0 +1,8 @@
+[
+  {
+    "Source": "workingevents.api",
+    "DetailType": "ResenyaEnviada",
+    "EventBusName": "workingevents-bus",
+    "Detail": "{\"id\": \"rev-sin-comentario\", \"calificacion\": 2, \"email\": \"cliente@ejemplo.com\"}"
+  }
+]
