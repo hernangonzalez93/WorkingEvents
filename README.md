@@ -4,8 +4,7 @@ Laboratorio de estudio sobre arquitectura orientada a eventos en AWS. Unos clien
 reseñas en una plataforma; el sistema las procesa **en tiempo real y de forma asíncrona**,
 analiza el texto y **envía una alerta por correo** cuando una reseña es negativa.
 
-Está hecho con .NET 10, Python y Terraform sobre EventBridge, SQS, Lambda y SNS. El frontal
-en Next.js llega en la Fase 5.
+Está hecho con .NET 10, Next.js, Python y Terraform sobre EventBridge, SQS, Lambda y SNS.
 
 > Es un proyecto de aprendizaje. Cada decisión está explicada desde cero en [`docs/`](docs/),
 > incluidos los errores que se cometieron por el camino y cómo se descubrieron.
@@ -16,7 +15,7 @@ en Next.js llega en la Fase 5.
 
 ```mermaid
 flowchart LR
-    W["Formulario web<br/>(Next.js, Fase 5)"] -->|POST /resenyas| A["API .NET 10"]
+    W["Formulario web<br/>(Next.js)"] -->|POST /resenyas| A["API .NET 10"]
     A -->|PutEvents| EB["EventBridge<br/>regla: calificación ≤ 3"]
     EB --> Q["Cola SQS"]
     Q -.->|tras 3 fallos| DLQ["Cola de mensajes muertos"]
@@ -46,7 +45,7 @@ flowchart LR
 | 2 | Infraestructura de eventos: EventBridge, SQS, SNS | ✅ |
 | 3 | API en .NET 10 | ✅ |
 | 4 | Lambda con analizador de sentimiento | ✅ probada de punta a punta |
-| 5 | Frontal en Next.js | pendiente |
+| 5 | Frontal en Next.js | ✅ |
 | 6 | Observabilidad: alarmas y cola de mensajes muertos | pendiente |
 | 7 | Análisis con Claude: API de Anthropic y Secrets Manager | pendiente |
 | 8 | Hospedar la web y la API en AWS | pendiente |
@@ -56,6 +55,7 @@ flowchart LR
 ```
 infra/            Terraform: bus, regla, colas, topic, Lambda e interruptor de apagado
 src/api/          API en .NET 10 que publica las reseñas
+src/web/          Frontal en Next.js: el formulario de reseñas
 src/lambda/
   funcion/        El código que se despliega en Lambda
   pruebas/        21 pruebas con unittest, sin dependencias
@@ -80,6 +80,7 @@ Por orden de lectura:
 | [LAMBDA](docs/LAMBDA.md) | La función, su rol, sus permisos y su código |
 | [EVENT-SOURCE-MAPPING](docs/EVENT-SOURCE-MAPPING.md) | Cómo se comunican la cola y la Lambda, y dónde verlo en la consola |
 | [PRUEBA-DE-PUNTA-A-PUNTA](docs/PRUEBA-DE-PUNTA-A-PUNTA.md) | La prueba final y todo lo que enseñaron los logs |
+| [FRONTAL](docs/FRONTAL.md) | El formulario en Next.js, y CORS explicado desde cero |
 
 ## Puesta en marcha
 
@@ -120,7 +121,21 @@ Escucha en `http://localhost:5080`. Para mandar una reseña:
 Invoke-RestMethod -Method Post -Uri http://localhost:5080/resenyas -ContentType 'application/json' -Body '{"comentario":"Llegó roto y nadie contesta","calificacion":2,"email":"cliente@ejemplo.com"}'
 ```
 
-### 3. Pruebas de la Lambda
+### 3. Frontal
+
+Con la API arrancada, en otra terminal:
+
+```powershell
+cd src/web
+npm install
+copy .env.example .env.local
+npm run dev
+```
+
+Se abre en `http://localhost:3000`. Una reseña negativa o de 1 estrella **envía un correo de
+alerta de verdad**; para probar sin correos, usa 3 estrellas y un texto neutro.
+
+### 4. Pruebas de la Lambda
 
 ```bash
 python -B -m unittest discover -s src/lambda/pruebas -v

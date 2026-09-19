@@ -7,6 +7,10 @@
 - Parte 1. Diferencia entre `appsettings.json` y `launchSettings.json`
 - Parte 2. Cómo la task definition de ECS sustituirá a `launchSettings.json` (Fase 8)
 
+> **Nota posterior, de la Fase 5:** ahora **sí existe** `appsettings.Development.json`, con los
+> orígenes que CORS permite en desarrollo. Donde este documento dice que no existe, describe el
+> estado de la Fase 3. Se explica en [FRONTAL](FRONTAL.md#95-la-configuración).
+
 ---
 
 ## Parte 1. Diferencia entre `appsettings.json` y `launchSettings.json`

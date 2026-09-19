@@ -45,3 +45,6 @@ build/
 # ---------------------------------------------------------------------------
 .DS_Store
 Thumbs.db
+
+# Configuracion local de las herramientas del editor.
+.claude/

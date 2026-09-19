@@ -36,7 +36,7 @@ flowchart LR
 ### 3.1 El formulario (Next.js)
 
 La página donde el cliente escribe la reseña. Es un formulario con tres campos: comentario,
-calificación y correo. Llega en la Fase 5.
+calificación y correo. Se explica en [FRONTAL](FRONTAL.md).
 
 ### 3.2 La API (.NET 10)
 

@@ -46,14 +46,45 @@ builder.Services.AddSingleton<PublicadorDeEventos>();
 builder.Services.AddValidation();
 builder.Services.AddProblemDetails();
 
+// ---------------------------------------------------------------------------
+// 4. CORS: que paginas de OTRO origen pueden llamar a la API desde un navegador
+// ---------------------------------------------------------------------------
+// Un origen es esquema + host + puerto. http://localhost:3000 (el frontal) y
+// http://localhost:5080 (esta API) son origenes DISTINTOS aunque esten en la
+// misma maquina: cambia el puerto. Por defecto, el navegador no deja que una
+// pagina lea la respuesta de otro origen salvo que ese otro origen lo autorice
+// con cabeceras. Esto es lo que las pone.
+//
+// La lista sale de la configuracion y NO del codigo:
+//   appsettings.json               -> vacia: nadie. Es lo que valdria en produccion
+//   appsettings.Development.json   -> http://localhost:3000, solo en desarrollo
+//
+// Y es una lista concreta, no AllowAnyOrigin: se autoriza lo justo. Solo POST y
+// solo la cabecera Content-Type, que es todo lo que usa el formulario.
+//
+// OJO: CORS NO protege la API. Lo aplica el NAVEGADOR para proteger a quien
+// navega. curl, Postman o cualquier servidor ignoran estas cabeceras por
+// completo. Proteger la API de verdad (autenticacion, limite de peticiones) es
+// otro asunto, pendiente para antes de la Fase 8.
+// ---------------------------------------------------------------------------
+var origenesPermitidos = builder.Configuration.GetSection("Cors:OrigenesPermitidos").Get<string[]>() ?? [];
+builder.Services.AddCors(opciones => opciones.AddPolicy("frontal", politica => politica
+    .WithOrigins(origenesPermitidos)
+    .WithMethods("POST")
+    .WithHeaders("Content-Type")));
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
 
+// Tiene que ir antes de los endpoints: responde a la pregunta previa del
+// navegador (el "preflight", una peticion OPTIONS) antes de que llegue a ellos.
+app.UseCors("frontal");
+
 app.MapGet("/health", () => Results.Ok(new { status = "Healthy", service = "workingevents-api" }));
 
 // ---------------------------------------------------------------------------
-// 4. El endpoint: recibir una resenya y publicarla
+// 5. El endpoint: recibir una resenya y publicarla
 // ---------------------------------------------------------------------------
 app.MapPost("/resenyas", async (NuevaResenya peticion, PublicadorDeEventos publicador, CancellationToken ct) =>
 {

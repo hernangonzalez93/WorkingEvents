@@ -149,3 +149,14 @@ inicializar:
 ```powershell
 terraform init -backend-config="bucket=<bucket-de-estado>"
 ```
+
+## 7. Ficheros que aparecen solos al arrancar el frontal
+
+Si `next dev` detecta que lo ha lanzado un asistente de IA, crea en `src/web` dos ficheros,
+`AGENTS.md` y `CLAUDE.md`, con instrucciones dirigidas a ese asistente. Lo detecta con la
+variable de entorno `CLAUDECODE`, a través de la librería `@vercel/detect-agent` que Next.js
+lleva dentro.
+
+Por eso aparecieron al arrancarlo durante el desarrollo asistido, y **no aparecen al arrancarlo
+desde tu propia terminal**. Las instrucciones que contienen no se siguieron: son contenido de
+un fichero, no órdenes de quien trabaja en el proyecto.

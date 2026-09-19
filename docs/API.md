@@ -64,16 +64,22 @@ Cliente
 ```csharp
 public sealed record NuevaResenya
 {
-    [Required, StringLength(2000, MinimumLength = 3)]
+    [Required(ErrorMessage = "Escribe un comentario.")]
+    [StringLength(2000, MinimumLength = 3, ErrorMessage = "El comentario debe tener entre 3 y 2000 caracteres.")]
     public string Comentario { get; init; } = "";
 
-    [Range(1, 5)]
+    [Range(1, 5, ErrorMessage = "Elige una valoración de 1 a 5 estrellas.")]
     public int Calificacion { get; init; }
 
-    [Required, EmailAddress]
+    [Required(ErrorMessage = "Escribe tu correo.")]
+    [EmailAddress(ErrorMessage = "Ese correo no parece válido.")]
     public string Email { get; init; } = "";
 }
 ```
+
+Los `ErrorMessage` se añadieron en la Fase 5. Sin ellos, .NET usa sus textos por defecto, en
+inglés, y el formulario los mostraba así en una página en español
+([FRONTAL](FRONTAL.md#8-dos-validaciones-con-papeles-distintos)).
 
 | Palabra | Significado |
 |---|---|
@@ -227,7 +233,14 @@ salen las credenciales.
 - `AddProblemDetails()` da a todos los errores el formato JSON estándar RFC 9457 (`type`,
   `title`, `status`, `errors`…).
 
-### 9.4 El endpoint y los códigos HTTP
+### 9.4 CORS
+
+Desde la Fase 5, `Program.cs` autoriza a ciertas páginas de otro origen a llamar a la API desde
+un navegador. La lista de orígenes sale de la configuración: vacía en `appsettings.json`, y con
+`http://localhost:3000` en `appsettings.Development.json`. Se explica en
+[FRONTAL](FRONTAL.md#9-cors-desde-cero).
+
+### 9.5 El endpoint y los códigos HTTP
 
 `Guid.NewGuid()` genera un identificador que en la práctica nunca se repite. El prefijo `rev-`
 lo hace reconocible en los logs, y `.Trim()` quita los espacios del principio y del final.
@@ -269,7 +282,7 @@ el número de seguimiento que pone Correos en el sobre.
 
 ## 12. Lo que todavía no hace
 
-- **CORS:** el navegador bloqueará las llamadas desde Next.js hasta la Fase 5.
+- ~~CORS~~: resuelto en la Fase 5, ver [FRONTAL](FRONTAL.md#9-cors-desde-cero).
 - **Autenticación y límite de peticiones:** cualquiera que llegue a la API puede publicar sin
   límite. Es el riesgo que cubre `flujo_activo`. En local no importa; antes de la Fase 8, sí.
 - **Pruebas automáticas.**

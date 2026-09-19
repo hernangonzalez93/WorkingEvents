@@ -1,0 +1,101 @@
+/* Colores como variables: un unico sitio que cambiar, y un segundo juego para
+   quien tenga el sistema en modo oscuro. */
+:root {
+  --fondo: #f6f5f1;
+  --tarjeta: #ffffff;
+  --texto: #1f1e1b;
+  --suave: #6b6960;
+  --borde: #dcd9cf;
+  --acento: #2f5f8a;
+  --estrella: #d99a1e;
+  --ok-fondo: #e7f3e4;
+  --ok-texto: #2b5a1f;
+  --error-fondo: #fbeaea;
+  --error-texto: #8f2a2a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #18181a;
+    --tarjeta: #222225;
+    --texto: #ecebe6;
+    --suave: #a3a19a;
+    --borde: #3a3a3e;
+    --acento: #8bb8e0;
+    --estrella: #f0b73d;
+    --ok-fondo: #1f3320;
+    --ok-texto: #b5dca8;
+    --error-fondo: #3a2020;
+    --error-texto: #f1b0b0;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+}
+
+.pagina { max-width: 34rem; margin: 0 auto; padding: 3rem 1rem; }
+
+.marca { color: var(--acento); font-weight: 600; letter-spacing: 0.04em; margin: 0; }
+.cabecera h1 { font-size: 1.9rem; margin: 0.25rem 0 0.5rem; }
+.subtitulo { color: var(--suave); margin: 0 0 2rem; }
+
+.formulario {
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.campo { border: 0; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.campo label, .campo legend { font-weight: 600; padding: 0; }
+
+textarea, input[type="email"] {
+  font: inherit;
+  color: inherit;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  width: 100%;
+}
+textarea:focus, input[type="email"]:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
+
+.estrellas { display: flex; align-items: center; gap: 0.15rem; }
+.estrella { font-size: 2rem; line-height: 1; color: var(--borde); cursor: pointer; }
+.estrella.llena { color: var(--estrella); }
+/* El boton de opcion real sigue ahi (se puede usar con teclado), solo invisible. */
+.estrella input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.estrella:has(input:focus-visible) { outline: 2px solid var(--acento); border-radius: 4px; }
+.etiqueta-estrellas { color: var(--suave); margin-left: 0.5rem; }
+
+.solo-lectores { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+button {
+  font: inherit;
+  font-weight: 600;
+  background: var(--acento);
+  color: var(--tarjeta);
+  border: 0;
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.6; cursor: progress; }
+
+.error-campo { color: var(--error-texto); margin: 0; font-size: 0.9rem; }
+
+.aviso { border-radius: 8px; padding: 0.75rem 1rem; }
+.aviso p { margin: 0.2rem 0; }
+.aviso-ok { background: var(--ok-fondo); color: var(--ok-texto); }
+.aviso-error { background: var(--error-fondo); color: var(--error-texto); }
+.detalle { font-size: 0.8rem; opacity: 0.85; margin-top: 0.5rem !important; }
+.detalle code { font-size: 0.75rem; }
