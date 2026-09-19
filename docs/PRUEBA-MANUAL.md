@@ -136,6 +136,9 @@ A la cola llegó **un mensaje**. El de 5 estrellas se descartó en silencio: sin
 sin rastro. Si un evento no llega a su destino, EventBridge **no dice por qué**, y la causa
 casi siempre es un patrón que no encaja.
 
+> **Nota de la Fase 7.** La regla ya no filtra por calificación: hoy, `rev-002` también llegaría a la
+> cola ([IA](IA.md#2-quitar-el-filtro-de-eventbridge)).
+
 **Una confusión frecuente:** al publicar se escribe `Source`, `DetailType` y `Detail`, con
 mayúscula, porque así se llaman los campos del formulario de `PutEvents`. Pero en la regla y en
 el evento entregado aparecen como `source`, `detail-type` y `detail`. Son los mismos datos

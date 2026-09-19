@@ -6,6 +6,11 @@ mirar. Infraestructura en [`infra/alarmas.tf`](../infra/alarmas.tf).
 Todo se probó **provocando fallos a propósito**, y los tiempos de este documento son los
 reales.
 
+> **Nota de la Fase 7.** Hay una **cuarta alarma**, `analisis-degradado`: salta cuando la IA falla y
+> las reseñas se analizan con el léxico ([IA](IA.md#7-el-respaldo-y-la-cuarta-alarma)). Además, el
+> *visibility timeout* pasó de 180 s a 720 s, así que un mensaje venenoso tarda ahora unos 36
+> minutos, y no 11, en llegar a la DLQ.
+
 ---
 
 ## 1. Resultado

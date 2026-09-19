@@ -3,6 +3,10 @@
 Por qué la Lambda no tiene ni una línea de código de SQS y, aun así, procesa los mensajes de la
 cola. Y dónde se puede ver esto funcionando en la consola de AWS.
 
+> **Nota de la Fase 7.** Las cifras de este documento son las de la Fase 4: lotes de 10 y un
+> *visibility timeout* de 180 s. Desde que analiza la IA son lotes de **5** y **720 s**
+> ([IA](IA.md#8-una-cadena-de-números-que-tiene-que-cuadrar)). El mecanismo es el mismo.
+
 ---
 
 ## 1. La clave: ni la cola ni la Lambda llaman a la otra

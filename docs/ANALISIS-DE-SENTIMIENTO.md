@@ -32,11 +32,13 @@ La decisión final:
 
 | Fase | Analizador | Por qué |
 |---|---|---|
-| **4 (ahora)** | **Propio, en Python puro** | Cero dependencias y cero coste. Funciona hoy y permitió probar el flujo completo de punta a punta |
-| **7** | **API de Anthropic + Secrets Manager** | Es una llamada HTTPS a un servicio externo, no un servicio de IA de AWS, así que esquiva el bloqueo. Secrets Manager sí funciona en la cuenta |
+| **4** | **Propio, en Python puro** | Cero dependencias y cero coste. Permitió probar el flujo completo de punta a punta |
+| **7** | **Un modelo de IA, con el proveedor como parámetro** (hoy OpenAI `gpt-5.6-luna`) | Son llamadas HTTPS a servicios externos, no servicios de IA de AWS, así que esquivan el bloqueo. Las claves van en Secrets Manager, que sí funciona en la cuenta |
 
-Tener primero el analizador propio tiene una ventaja: en la Fase 7 se podrán comparar los dos
-sobre las mismas reseñas.
+Tener primero el analizador propio tuvo una ventaja: en la Fase 7 se compararon los dos sobre
+las mismas reseñas. La IA acertó 10 de 10 y el léxico 3 de 10
+([IA](IA.md#10-comparación-1-léxico-contra-gpt-56-sol)). El léxico sigue en el código como
+**respaldo**: si la IA falla, analiza él y salta una alarma.
 
 ## 3. El analizador propio
 
@@ -142,6 +144,10 @@ resto. Entre ellas, se avisa si se cumple alguna de estas dos reglas, comprobada
 Si no se cumple ninguna, por ejemplo con 3 estrellas y "Cumple su función.", no se avisa, pero
 la reseña queda registrada en el log. La función devuelve también el **motivo**, que va al log y
 al correo.
+
+> **Nota de la Fase 7.** Ahora llegan a la Lambda **todas** las reseñas, no solo las de 1 a 3
+> estrellas, y hay una regla más entre las dos: se avisa también si la **urgencia es ALTA**, algo
+> que solo detecta la IA ([IA](IA.md#62-la-urgencia)).
 
 ## 5. Los límites, escritos como pruebas
 

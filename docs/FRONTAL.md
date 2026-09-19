@@ -341,3 +341,35 @@ Para probar sin generar correos, usa 3 estrellas y un texto neutro.
 - **No está desplegado:** solo funciona en local. Llegará en la Fase 8.
 - **No tiene protección contra abusos**, ni en el frontal ni en la API (ver 9.7).
 - **No tiene pruebas automáticas.** Se comprobó a mano, con el navegador y con `curl`.
+
+## 12. Un aviso que no es culpa nuestra: la hidratación
+
+En la consola del navegador apareció este aviso:
+
+> *A tree hydrated but some attributes of the server rendered HTML didn't match the client
+> properties. This won't be patched up.*
+
+**Qué es la hidratación.** El servidor de Next.js genera el HTML y el navegador lo muestra en
+seguida. Después llega React, recorre ese HTML y le "da vida": conecta los clics, el estado y el
+envío. Para hacerlo espera encontrar **exactamente** el HTML que él mismo habría generado, y si
+algo lo cambió entre medias, avisa.
+
+**Qué lo cambió.** Cuatro `div` tenían un atributo que nadie de nuestro lado pone:
+`bis_skin_checked="1"`.
+
+| Dónde se buscó `bis_skin_checked` | Resultado |
+|---|---|
+| Nuestro código | 0 |
+| El HTML que envía el servidor | 0 |
+| React | 0 |
+| El navegador, según el aviso | En los 4 `div` |
+
+Solo lo puede añadir algo que corre **dentro del navegador**: una **extensión**. El propio aviso
+de React lo sugiere. Ese atributo en concreto se suele atribuir a extensiones de seguridad, como
+la de Bitdefender.
+
+**Qué hacer.** Nada en el código: el aviso solo aparece en desarrollo y el formulario funciona.
+Para no verlo, abre `localhost` en una ventana de incógnito o desactiva esa extensión para él. No
+se usó `suppressHydrationWarning`, porque habría que ponerlo en cada `div` y ocultaría también los
+errores de hidratación que sí fueran nuestros.
+

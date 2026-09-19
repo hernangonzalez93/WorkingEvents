@@ -16,23 +16,24 @@ Está hecho con .NET 10, Next.js, Python y Terraform sobre EventBridge, SQS, Lam
 ```mermaid
 flowchart LR
     W["Formulario web<br/>(Next.js)"] -->|POST /resenyas| A["API .NET 10"]
-    A -->|PutEvents| EB["EventBridge<br/>regla: calificación ≤ 3"]
+    A -->|PutEvents| EB["EventBridge<br/>regla: todas las reseñas"]
     EB --> Q["Cola SQS"]
     Q -.->|tras 3 fallos| DLQ["Cola de mensajes muertos"]
-    Q -->|event source mapping| L["Lambda en Python<br/>analizador de sentimiento"]
+    Q -->|event source mapping| L["Lambda en Python<br/>análisis con IA"]
     L -->|si es negativa| SNS["SNS"]
     SNS --> M["Correo de alerta"]
 ```
 
 1. La **API** valida la reseña, publica el evento `ResenyaEnviada` y responde `202 Accepted`,
    porque el análisis ocurre después.
-2. **EventBridge** filtra por metadatos: solo las reseñas de 3 estrellas o menos siguen
-   adelante.
+2. **EventBridge** lleva todas las reseñas de la API a la cola. Desde la Fase 7 ya no filtra
+   por calificación: decide la Lambda, leyendo el texto.
 3. **SQS** las guarda hasta que se procesan. Si algo falla, se reintenta, y tras tres fallos el
    mensaje se aparta a la cola de mensajes muertos.
 4. El **event source mapping** recoge los mensajes de la cola e invoca la Lambda.
-5. La **Lambda** analiza el texto. Si es negativo, o si la calificación es de 1 estrella,
-   publica en SNS.
+5. La **Lambda** analiza el texto con IA (OpenAI `gpt-5.6-luna`; el proveedor es un
+   parámetro) y, si es negativo, urgente o de 1 estrella, publica en SNS. Si la IA falla,
+   analiza con un léxico propio y salta una alarma.
 6. **SNS** envía el correo, con el comentario, el motivo y las palabras que hicieron saltar la
    alerta.
 
@@ -47,7 +48,7 @@ flowchart LR
 | 4 | Lambda con analizador de sentimiento | ✅ probada de punta a punta |
 | 5 | Frontal en Next.js | ✅ |
 | 6 | Observabilidad: alarmas y cola de mensajes muertos | ✅ probada provocando fallos |
-| 7 | Análisis con Claude: API de Anthropic y Secrets Manager | pendiente |
+| 7 | Análisis con IA: proveedor configurable y Secrets Manager | ✅ con `gpt-5.6-luna` |
 | 8 | Hospedar la web y la API en AWS | pendiente |
 
 ## Estructura
@@ -57,9 +58,11 @@ infra/            Terraform: bus, regla, colas, topics, Lambda, alarmas e interr
 src/api/          API en .NET 10 que publica las reseñas
 src/web/          Frontal en Next.js: el formulario de reseñas
 src/lambda/
-  funcion/        El código que se despliega en Lambda
-  pruebas/        21 pruebas con unittest, sin dependencias
+  funcion/        El código que se despliega en Lambda: la analizadora y la comparadora
+  pruebas/        32 pruebas con unittest, sin dependencias
   simulacion/     Simulación en local del event source mapping
+  empaquetar.py   Construye la capa con los SDK de Anthropic y OpenAI
+  comparar.py     Compara los motores de análisis sobre las mismas reseñas
 pruebas/          Eventos de ejemplo para publicar a mano con el CLI
 docs/             La documentación, tema a tema
 ```
@@ -82,6 +85,7 @@ Por orden de lectura:
 | [PRUEBA-DE-PUNTA-A-PUNTA](docs/PRUEBA-DE-PUNTA-A-PUNTA.md) | La prueba final y todo lo que enseñaron los logs |
 | [FRONTAL](docs/FRONTAL.md) | El formulario en Next.js, y CORS explicado desde cero |
 | [OBSERVABILIDAD](docs/OBSERVABILIDAD.md) | Tres alarmas, cómo se probaron provocando fallos, y qué hacer cuando salta la de la DLQ |
+| [IA](docs/IA.md) | Analizar con IA: quitar el filtro, la capa de dependencias, Secrets Manager, las comparaciones y la elección del modelo |
 
 ## Puesta en marcha
 
@@ -96,6 +100,7 @@ Por orden de lectura:
 ### 1. Infraestructura
 
 ```powershell
+python src/lambda/empaquetar.py                     # la capa de dependencias, solo la primera vez
 cd infra
 copy terraform.tfvars.example terraform.tfvars      # rellena la cuenta y el correo
 $env:AWS_PROFILE = '<tu-perfil>'
@@ -106,6 +111,10 @@ terraform apply plan.tfplan
 
 Después del primer `apply`, AWS envía un correo de confirmación a la dirección de las alertas.
 **Hasta que no se pulsa el enlace, no llega ninguna alerta.**
+
+Por defecto se analiza con el léxico, sin IA. Para usar un modelo de IA, guarda su clave en
+Secrets Manager ([IA](docs/IA.md#cómo-se-guarda-una-clave)) y pon `proveedor_analisis` en
+`terraform.tfvars`.
 
 ### 2. API
 
@@ -163,3 +172,4 @@ Tres datos se quedan fuera a propósito, porque son personales o identifican la 
 | Número de cuenta de AWS | `infra/terraform.tfvars`, en `.gitignore` |
 | Correo de las alertas | `infra/terraform.tfvars`, en `.gitignore` |
 | Nombre del bucket de estado | Se pasa a `terraform init` con `-backend-config`, porque contiene el número de cuenta |
+| Claves de las APIs de IA | En Secrets Manager. Se guardan a mano y nunca pasan por el código ni por Terraform |

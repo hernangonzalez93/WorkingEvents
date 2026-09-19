@@ -26,7 +26,9 @@ Se siguen las del proyecto TestEnforce:
 | `notificaciones.tf` | El topic de SNS y la suscripción por correo |
 | `cola.tf` | La cola principal, la de mensajes muertos y el permiso para EventBridge |
 | `eventos.tf` | El bus propio, la regla de filtrado y su destino |
-| `lambda.tf` | La función, su rol, sus permisos, sus logs y su conexión con la cola |
+| `lambda.tf` | La función, su capa de dependencias, su rol, sus permisos, sus logs y su conexión con la cola |
+| `comparador.tf` | La Lambda comparadora: mismo código y misma capa, otro rol (Fase 7) |
+| `secretos.tf` | Los secretos donde se guardan las claves de las APIs de IA, sin su valor (Fase 7) |
 | `alarmas.tf` | El topic de avisos técnicos, un filtro de métricas y tres alarmas |
 | `apagado.tf` | El interruptor general y el apagado nocturno opcional |
 | `outputs.tf` | Nada: los valores que se muestran después de aplicar |
@@ -178,7 +180,7 @@ investigarlos con calma.
 
 | Ajuste | Valor | Por qué |
 |---|---|---|
-| `visibility_timeout_seconds` | **180** | Cuánto tiempo queda invisible un mensaje mientras se procesa. AWS recomienda **6 veces el timeout de la Lambda** (30 s). Si fuera menor, el mensaje reaparecería mientras todavía se está procesando: correo duplicado y coste duplicado |
+| `visibility_timeout_seconds` | **720** | Cuánto tiempo queda invisible un mensaje mientras se procesa. AWS recomienda **6 veces el timeout de la Lambda**: fue 180 s (6 × 30) con el léxico, y es 720 s (6 × 120) desde que analiza la IA. Si fuera menor, el mensaje reaparecería mientras todavía se está procesando: correo duplicado y coste duplicado |
 | `message_retention_seconds` | 4 días | Si nadie lo recoge en ese plazo, algo está roto de todas formas |
 | `receive_wait_time_seconds` | **20** | *Long polling*: si la cola está vacía, la pregunta espera hasta 20 s antes de responder "nada". Menos peticiones facturables y menos latencia |
 | `redrive_policy` | 3 intentos | Tras 3 intentos fallidos, el mensaje se aparta a la DLQ |
@@ -212,9 +214,6 @@ los permisos más acotados. No cuesta nada: se paga por evento publicado.
 event_pattern = jsonencode({
   source        = ["workingevents.api"]
   "detail-type" = ["ResenyaEnviada"]
-  detail = {
-    calificacion = [{ numeric = ["<=", var.umbral_calificacion] }]
-  }
 })
 ```
 
@@ -222,8 +221,11 @@ El patrón es una plantilla, y la comparación es **por estructura**: cada clave
 que existir en el evento, con uno de los valores listados. Tienen que cumplirse **todas** las
 condiciones.
 
-`numeric` hace que la calificación se compare como número. Sin él, `["1","2","3"]` compararía
-texto, y la calificación tiene que llegar como número, no como `"2"`.
+Hasta la Fase 6, el patrón tenía una tercera condición, `detail.calificacion` con
+`numeric = ["<=", 3]`, y la regla se llamaba `resenyas-sospechosas`. `numeric` hacía que la
+calificación se comparase como número: sin él, `["1","2","3"]` compararía texto. En la Fase 7 se
+quitó para que todas las reseñas lleguen a la Lambda
+([IA](IA.md#2-quitar-el-filtro-de-eventbridge)), y la regla se renombró con un bloque `moved`.
 
 `state = var.flujo_activo ? "ENABLED" : "DISABLED"` conecta la regla con el interruptor
 general.
@@ -294,3 +296,4 @@ Dos cosas que conviene saber sobre los planes guardados:
 | 2 | 9: bus, regla, destino, dos colas, permiso de la cola, topic, suscripción y guardia |
 | 4 | 5: grupo de logs, rol, permisos, función y event source mapping |
 | 6 | 6: topic de operaciones, su suscripción, un filtro de métricas y tres alarmas. Además se actualizó la Lambda por un cambio de un comentario |
+| 7 | 11: 2 secretos, la capa, la comparadora con su rol, permisos y logs, y el filtro y la alarma del análisis degradado. Se reemplazaron la regla y su destino, y después se quitó el secreto de Anthropic |

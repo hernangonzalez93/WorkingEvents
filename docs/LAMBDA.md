@@ -25,13 +25,18 @@ un profesional al que se llama por encargo y que cobra por minuto trabajado.
 cientos de milisegundos. Las siguientes invocaciones reutilizan el contenedor y son mucho más
 rápidas. Se midió en la [prueba de punta a punta](PRUEBA-DE-PUNTA-A-PUNTA.md).
 
-## 2. El código, en tres ficheros
+## 2. El código
 
 | Fichero | ¿Habla con AWS? | ¿Se puede probar en local sin instalar nada? |
 |---|---|---|
 | [`analizador.py`](../src/lambda/funcion/analizador.py) | No | ✅ |
 | [`alertas.py`](../src/lambda/funcion/alertas.py) | No | ✅ |
+| [`analizador_llm.py`](../src/lambda/funcion/analizador_llm.py) (Fase 7) | No: habla con OpenAI o Anthropic | ✅ Todo menos la llamada |
+| [`secretos.py`](../src/lambda/funcion/secretos.py) (Fase 7) | **Sí**, con `boto3` | No |
 | [`manejador.py`](../src/lambda/funcion/manejador.py) | **Sí**, con `boto3` | No |
+| [`comparador.py`](../src/lambda/funcion/comparador.py) (Fase 7) | Sí: es la entrada de la comparadora | No |
+
+La Fase 7 añadió el análisis con IA; se explica en [IA](IA.md).
 
 Toda la lógica está en los dos primeros. `manejador.py` es fino a propósito: solo conecta las
 piezas con AWS. El analizador tiene su propio documento,
@@ -40,7 +45,7 @@ piezas con AWS. El analizador tiene su propio documento,
 ## 3. Qué pasa dentro de la Lambda
 
 ```
-handler(event)                         <- AWS la llama con un lote de hasta 10 mensajes
+handler(event)                         <- AWS la llama con un lote de hasta 5 mensajes
   │
   └─ por cada mensaje: procesar()
        ├─ ① extraer_resenya()   abre las 3 capas: Body (texto) → sobre → detail
@@ -150,8 +155,9 @@ Tiene seis piezas, en el orden en que dependen unas de otras:
 ### 7.1 El paquete
 
 Lambda no acepta una carpeta: recibe un único fichero comprimido. Solo viaja `funcion/`, sin
-las pruebas. **No hay dependencias que instalar**: el analizador usa solo la biblioteca estándar
-y `boto3` ya viene incluido en Lambda. `excludes` deja fuera las cachés `__pycache__`; se
+las pruebas. El código propio no tiene dependencias; las de la IA (los SDK de Anthropic y
+OpenAI) van aparte, en una **capa** ([IA](IA.md#43-una-capa-y-no-todo-en-el-mismo-zip)), y
+`boto3` ya viene incluido en Lambda. `excludes` deja fuera las cachés `__pycache__`; se
 comprobó creando una a propósito y mirando el `.zip`.
 
 ### 7.2 El grupo de logs
@@ -181,6 +187,7 @@ Un rol tiene dos políticas, que responden a dos preguntas distintas:
 | Bloque | Acciones | Sobre qué |
 |---|---|---|
 | `LeerLaCola` | `ReceiveMessage`, `DeleteMessage`, `GetQueueAttributes` | Solo esta cola |
+| `LeerSuClave` (Fase 7) | `GetSecretValue` | Solo el secreto del proveedor que usa. Con `lexico` este bloque no existe |
 | `PublicarAlertas` | `Publish` | Solo este topic |
 | `EscribirLogs` | `CreateLogStream`, `PutLogEvents` | Solo su grupo de logs. El `:*` final cubre cada flujo de logs, uno por contenedor |
 
@@ -198,16 +205,17 @@ rol de la función. Se explica en
 | `runtime` | `python3.13` | La misma versión que en local |
 | `handler` | `manejador.handler` | "fichero.función" |
 | `architectures` | `arm64` | Procesadores Graviton de AWS: en torno a un **20 % más baratos** que x86. Posible porque el código es Python puro |
-| `memory_size` | `128` | El mínimo. En Lambda la memoria también reparte la CPU, pero analizar un texto tarda milisegundos. En la prueba usó 93 MB |
-| `timeout` | `30` | Está **atado a la cola**: el visibility timeout de 180 s es 6 × 30, como recomienda AWS. Si se cambia uno, hay que cambiar el otro |
+| `memory_size` | `256` | Fue 128 MB con el léxico, que usaba 93. Con los SDK de la IA sube a unos 145 MB. En Lambda la memoria también reparte la CPU ([IA](IA.md#13-el-arranque-en-frío-medido-pendiente-de-decidir)) |
+| `timeout` | `120` | Fue 30 s con el léxico. Está **atado a la cola**: el visibility timeout es 6 × 120 = 720 s, como recomienda AWS. Si se cambia uno, hay que cambiar el otro |
+| `layers` | La capa de dependencias | Los SDK de Anthropic y OpenAI, compilados para Linux ARM (Fase 7) |
 | `source_code_hash` | La huella del `.zip` | Si cambia una letra del Python, cambia la huella y Terraform sube el código nuevo |
-| `environment` | `TOPIC_ARN` | Adónde publicar, sin escribirlo en el código |
+| `environment` | `TOPIC_ARN`, `PROVEEDOR_ANALISIS`, `MODELO`, `SECRETO_ID` | Adónde publicar y quién analiza. Del secreto solo viaja el **nombre**, nunca la clave |
 
 ### 7.6 La conexión con la cola
 
 | Ajuste | Valor |
 |---|---|
-| `batch_size` | 10 mensajes por invocación, como máximo |
+| `batch_size` | 5 mensajes por invocación, como máximo. Fueron 10 con el léxico; con la IA, cada reseña puede tardar hasta 20 s |
 | `enabled` | `var.flujo_activo`: el interruptor general también corta aquí |
 | `function_response_types` | `ReportBatchItemFailures`: activa la respuesta parcial |
 | `maximum_concurrency` | 2 copias a la vez, como mucho |
@@ -238,7 +246,9 @@ Se explica en [INFRAESTRUCTURA](INFRAESTRUCTURA.md#9-apagadotf-el-freno-de-mano)
 
 | Servicio | Uso | Coste |
 |---|---|---|
-| Lambda | ~0,1 s × 128 MB por invocación, con 1 millón de invocaciones y 400.000 GB-s al mes gratis | $0 |
+| Lambda | ~2 s × 256 MB por invocación en caliente, con 1 millón de invocaciones y 400.000 GB-s al mes gratis | $0 |
+| OpenAI `gpt-5.6-luna` (Fase 7) | ~380 tokens de entrada y ~60 de salida por reseña | ~0,15 $ por cada 1.000 reseñas |
+| Secrets Manager (Fase 7) | 1 secreto | 0,40 $/mes |
 | CloudWatch Logs | Una línea por reseña, durante 7 días | $0 |
 | SNS por correo | 1.000 notificaciones al mes gratis | $0 |
 

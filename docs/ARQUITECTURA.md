@@ -25,7 +25,7 @@ buzón.
 flowchart LR
     W["Formulario<br/>(Next.js)"] --> A["API .NET 10"]
     A -->|evento| EB["EventBridge"]
-    EB -->|"si calificación ≤ 3"| Q["SQS"]
+    EB -->|todas las reseñas| Q["SQS"]
     Q --> L["Lambda"]
     L -->|si es negativa| SNS["SNS"]
     SNS --> M["Correo"]
@@ -50,8 +50,9 @@ interesado, por ejemplo un panel de estadísticas, sin tocar a quien publica.
 ### 3.3 EventBridge: la centralita
 
 Imagina la **centralita de correo de una empresa**. Llegan cartas, y la centralita mira el
-sobre, sin abrirlo, y decide a qué departamento van según unas reglas. Aquí la regla es: *si la
-calificación es 3 o menos, a la cola de revisión*.
+sobre, sin abrirlo, y decide a qué departamento van según unas reglas. Hasta la Fase 6, la regla
+era *si la calificación es 3 o menos, a la cola de revisión*. Desde la Fase 7 es *toda reseña de
+la API, a la cola*: la calificación ya no filtra.
 
 Las cartas que no encajan con ninguna regla se descartan en silencio. EventBridge no guarda
 nada: reparte y olvida.
@@ -86,7 +87,7 @@ un ticket, sin tocar una línea de Python.
 ### 3.7 Secrets Manager: la caja fuerte
 
 Guarda contraseñas y claves de API cifradas. El código pide el secreto al ejecutarse, en vez de
-llevarlo escrito dentro. Se usará en la Fase 7, para la clave de la API de Anthropic.
+llevarlo escrito dentro. Desde la Fase 7 guarda la clave de la API de OpenAI.
 
 ## 4. Dónde se filtra: el sobre y la carta
 
@@ -105,8 +106,11 @@ tiene la Lambda leyendo el texto. Cada pieza hace lo que sabe hacer:
 Es el mismo principio que un filtro de spam: primero se descarta por remitente, y solo después
 se analiza el cuerpo de los mensajes que quedan.
 
-El caso de las 5 estrellas con texto furioso sigue sin analizarse: se decidió conscientemente,
-y el umbral es una variable (`umbral_calificacion`) por si se quiere cambiar.
+El caso de las 5 estrellas con texto furioso quedaba sin analizar.
+
+> **Nota de la Fase 7.** El filtro por calificación se quitó: ahora todas las reseñas llegan a la
+> Lambda, y las de 5 estrellas con una queja o con algo urgente dentro se detectan. El precio es
+> una llamada a la IA por cada reseña. Ver [IA](IA.md#2-quitar-el-filtro-de-eventbridge).
 
 ## 5. Coste
 
@@ -118,6 +122,7 @@ y el umbral es una variable (`umbral_calificacion`) por si se quiere cambiar.
 | SNS (correo) | 1.000 notificaciones al mes gratis | $0 |
 | CloudWatch Logs | Pequeño volumen, retención de 7 días | $0 |
 | Secrets Manager (Fase 7) | 0,40 $ por secreto al mes | 0,40 $/mes |
+| OpenAI `gpt-5.6-luna` (Fase 7) | 0,20 $ / 1,20 $ por millón de tokens | ~0,15 $ por cada 1.000 reseñas |
 
 La parte de eventos es **prácticamente gratis**. Lo que sí costará dinero es **hospedar la web y
 la API** (ECS Fargate, App Runner…), y por eso es una fase aparte, la 8, con su propia
