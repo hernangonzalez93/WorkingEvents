@@ -45,6 +45,16 @@ output "apagado_nocturno" {
   value       = var.apagado_nocturno ? "${var.apagado_cron} (${var.apagado_zona_horaria})" : "desactivado"
 }
 
+output "funcion_analizador" {
+  description = "Nombre de la Lambda."
+  value       = aws_lambda_function.analizador.function_name
+}
+
+output "ver_logs" {
+  description = "Comando para ver en directo lo que escribe la Lambda."
+  value       = "aws logs tail ${aws_cloudwatch_log_group.analizador.name} --follow --region ${var.region}"
+}
+
 # ---------------------------------------------------------------------------
 # Un recordatorio que ahorra media hora de desconcierto
 # ---------------------------------------------------------------------------

@@ -6,6 +6,13 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
+
+    # Empaqueta el codigo de la Lambda en un .zip. Lambda no acepta una
+    # carpeta: recibe un unico fichero comprimido.
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.7"
+    }
   }
 
   # El estado se guarda en S3, no en tu disco. La razon: el estado es el mapa

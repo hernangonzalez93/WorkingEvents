@@ -24,7 +24,10 @@
 #            Lambda deja de consumir. Nada se destruye, los mensajes en cola
 #            esperan. Se revierte poniendolo a true.
 #
-#   Nivel 2  El horario nocturno de abajo. Lo mismo, pero automatico.
+#   Nivel 2  El horario nocturno de abajo. Automatico, pero solo cierra la
+#            ENTRADA: deshabilita la regla y deja que la Lambda termine lo
+#            que ya estuviera en la cola. Asi no queda nada a medias, y los
+#            reintentos estan acotados por la cola de mensajes muertos.
 #
 #   Nivel 3  terraform destroy. Se va todo. En esta arquitectura es barato de
 #            rehacer porque no hay datos que perder.
@@ -32,12 +35,14 @@
 
 variable "flujo_activo" {
   description = <<-EOT
-    El interruptor general. Con false, la regla de EventBridge queda deshabilitada
-    y deja de enrutar eventos a la cola.
+    El interruptor general. Con false corta en dos sitios a la vez:
+      - la regla de EventBridge deja de enrutar eventos a la cola (eventos.tf)
+      - la Lambda deja de consumir la cola (lambda.tf)
 
     Lo que NO hace: no borra nada, no vacia la cola, no impide que la API
-    publique eventos. Los eventos se publican y se descartan, que es justo lo
-    que se quiere para cortar un bucle.
+    publique eventos. Los eventos nuevos se publican y se descartan, y lo que
+    ya estuviera en la cola espera alli (hasta 4 dias) a que se vuelva a
+    encender.
   EOT
   type        = bool
   default     = true
