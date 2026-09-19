@@ -246,6 +246,9 @@ lo hace reconocible en los logs, y `.Trim()` quita los espacios del principio y 
   hace falta el `$env:AWS_PROFILE` de PowerShell. Se comprobó arrancando la API con la variable
   borrada de la terminal. Si clonas el repositorio, **cambia el nombre del perfil** por el tuyo.
 
+La diferencia entre este fichero y `appsettings.json`, quién lee cada uno y qué lo sustituirá
+cuando la API se despliegue en AWS se explica a fondo en [CONFIGURACION-API](CONFIGURACION-API.md).
+
 El fichero [`WorkingEvents.Api.http`](../src/api/WorkingEvents.Api.http) tiene las peticiones de
 prueba. Visual Studio y VS Code, este con la extensión REST Client, muestran encima de cada una
 un botón **Send Request**.

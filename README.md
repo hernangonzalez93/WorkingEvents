@@ -76,6 +76,7 @@ Por orden de lectura:
 | [INFRAESTRUCTURA](docs/INFRAESTRUCTURA.md) | El Terraform fichero a fichero, el correo de SNS y el apagado |
 | [PRUEBA-MANUAL](docs/PRUEBA-MANUAL.md) | `PutEvents` pieza a pieza: el sobre, la carta y el visibility timeout |
 | [API](docs/API.md) | La API en .NET 10, línea a línea |
+| [CONFIGURACION-API](docs/CONFIGURACION-API.md) | `appsettings.json` frente a `launchSettings.json`, y cómo la task definition de ECS sustituirá a este último en la Fase 8 |
 | [LAMBDA](docs/LAMBDA.md) | La función, su rol, sus permisos y su código |
 | [EVENT-SOURCE-MAPPING](docs/EVENT-SOURCE-MAPPING.md) | Cómo se comunican la cola y la Lambda, y dónde verlo en la consola |
 | [PRUEBA-DE-PUNTA-A-PUNTA](docs/PRUEBA-DE-PUNTA-A-PUNTA.md) | La prueba final y todo lo que enseñaron los logs |
