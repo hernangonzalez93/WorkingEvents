@@ -41,3 +41,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Los crea `next dev` cuando detecta que lo lanza un asistente de IA, con
+# instrucciones dirigidas a ese asistente. No forman parte del proyecto.
+/AGENTS.md
+/CLAUDE.md

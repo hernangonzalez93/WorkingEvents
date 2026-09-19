@@ -160,3 +160,6 @@ lleva dentro.
 Por eso aparecieron al arrancarlo durante el desarrollo asistido, y **no aparecen al arrancarlo
 desde tu propia terminal**. Las instrucciones que contienen no se siguieron: son contenido de
 un fichero, no órdenes de quien trabaja en el proyecto.
+
+Se decidió **ignorarlos**: están en el `.gitignore` de `src/web`, así que, aunque vuelvan a
+aparecer, nunca llegan al repositorio.
