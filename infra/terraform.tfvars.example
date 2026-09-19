@@ -12,8 +12,13 @@ email_alertas = "tu-correo@ejemplo.com"
 
 # Opcionales, con valores por defecto razonables:
 
-# Calificacion maxima que se manda a analizar (1-5).
-# umbral_calificacion = 3
+# Quien analiza las resenyas: lexico (sin IA), anthropic u openai. Antes de
+# elegir un proveedor, guarda su clave en Secrets Manager (ver docs/IA.md).
+# proveedor_analisis = "lexico"
+
+# Modelos de cada proveedor (ver la descripcion en variables.tf).
+# modelo_anthropic = "claude-opus-5"
+# modelo_openai    = "gpt-5.6-sol"
 
 # Interruptor general. A false, la regla deja de enrutar. Nada se destruye.
 # flujo_activo = true

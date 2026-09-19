@@ -12,12 +12,22 @@ output "bus_de_eventos" {
 
 output "regla" {
   description = "Nombre de la regla de filtrado."
-  value       = aws_cloudwatch_event_rule.resenyas_sospechosas.name
+  value       = aws_cloudwatch_event_rule.resenyas.name
 }
 
-output "umbral" {
-  description = "Calificacion maxima que se manda a analizar."
-  value       = "calificacion <= ${var.umbral_calificacion}"
+output "analisis" {
+  description = "Quien analiza las resenyas, y con que modelo."
+  value       = var.proveedor_analisis == "lexico" ? "lexico (sin IA)" : "${var.proveedor_analisis}: ${local.modelos[var.proveedor_analisis]}"
+}
+
+output "secretos_llm" {
+  description = "Los secretos donde guardar cada clave. Se rellenan a mano: ver docs/IA.md."
+  value       = { for p, s in aws_secretsmanager_secret.clave_llm : p => s.name }
+}
+
+output "comparar" {
+  description = "Comando para comparar los motores de analisis sobre pruebas/comparacion.json."
+  value       = "python src/lambda/comparar.py"
 }
 
 output "cola_url" {
@@ -56,6 +66,7 @@ output "alarmas" {
     aws_cloudwatch_metric_alarm.mensajes_fallidos.alarm_name,
     aws_cloudwatch_metric_alarm.errores_lambda.alarm_name,
     aws_cloudwatch_metric_alarm.dlq_con_mensajes.alarm_name,
+    aws_cloudwatch_metric_alarm.analisis_degradado.alarm_name,
   ]
 }
 

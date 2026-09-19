@@ -8,11 +8,14 @@
 # Seis piezas, en el orden en que dependen unas de otras:
 #
 #   1. El paquete       el codigo Python, comprimido en un .zip
+#   1b. La capa         las librerias de terceros (SDK de Anthropic y OpenAI)
 #   2. El grupo de logs donde escribe la funcion, con fecha de caducidad
 #   3. El rol           la identidad con la que actua la funcion
 #   4. Los permisos     que puede hacer ese rol, y sobre que
-#   5. La funcion       el codigo + el rol + la configuracion
+#   5. La funcion       el codigo + la capa + el rol + la configuracion
 #   6. La conexion      la pieza que vigila la cola y llama a la funcion
+#
+# La comparadora, una segunda funcion con el mismo codigo, esta en comparador.tf.
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -23,8 +26,8 @@
 # El .zip se genera en infra/build/, que esta en .gitignore: es un producto de
 # la compilacion, no codigo fuente.
 #
-# No hace falta instalar dependencias: el analizador solo usa la biblioteca
-# estandar de Python, y boto3 ya viene incluido en el entorno de Lambda.
+# El codigo propio no tiene dependencias. Las de la IA van aparte, en la capa
+# del paso 1b, y boto3 ya viene incluido en el entorno de Lambda.
 # ---------------------------------------------------------------------------
 
 data "archive_file" "analizador" {
@@ -36,6 +39,50 @@ data "archive_file" "analizador" {
   # aportan nada y cambiarian la huella del paquete, forzando un despliegue
   # sin que el codigo haya cambiado.
   excludes = ["__pycache__", "__pycache__/**"]
+}
+
+# ---------------------------------------------------------------------------
+# 1b. La capa de dependencias
+# ---------------------------------------------------------------------------
+# Una CAPA es un .zip de librerias que Lambda coloca junto al codigo de la
+# funcion al arrancarla. Por que aparte, y no todo en el mismo paquete:
+#
+#   - Cambian a ritmos distintos. El codigo cambia a menudo; las librerias casi
+#     nunca. Separados, un cambio de una linea de Python sube 10 KB y no 20 MB.
+#   - Se construyen distinto. El codigo se empaqueta tal cual; las librerias hay
+#     que descargarlas compiladas para Linux ARM (src/lambda/empaquetar.py).
+#   - Se pueden compartir: la analizadora y la comparadora usan la misma.
+#
+# Lambda exige que las librerias de una capa de Python esten bajo "python/", y
+# es ahi donde las deja empaquetar.py.
+# ---------------------------------------------------------------------------
+
+data "archive_file" "dependencias" {
+  type        = "zip"
+  source_dir  = "${path.module}/build/capa"
+  output_path = "${path.module}/build/dependencias.zip"
+
+  # La capa no se construye sola: hay que ejecutar empaquetar.py antes. Sin esta
+  # comprobacion, el error seria un "no such file" poco claro.
+  lifecycle {
+    precondition {
+      condition     = fileexists("${path.module}/build/capa/python/anthropic/__init__.py")
+      error_message = "Falta la capa de dependencias. Ejecuta antes, desde la raiz del proyecto: python src/lambda/empaquetar.py"
+    }
+  }
+}
+
+resource "aws_lambda_layer_version" "dependencias" {
+  layer_name  = "${var.project}-dependencias"
+  description = "SDK de Anthropic y OpenAI, compilados para Linux ARM"
+
+  filename         = data.archive_file.dependencias.output_path
+  source_code_hash = data.archive_file.dependencias.output_base64sha256
+
+  # Solo sirve para este runtime y esta arquitectura: las partes compiladas de
+  # pydantic y jiter no funcionarian en otras.
+  compatible_runtimes      = ["python3.13"]
+  compatible_architectures = ["arm64"]
 }
 
 # ---------------------------------------------------------------------------
@@ -113,6 +160,19 @@ data "aws_iam_policy_document" "permisos_analizador" {
     actions   = ["logs:CreateLogStream", "logs:PutLogEvents"]
     resources = ["${aws_cloudwatch_log_group.analizador.arn}:*"]
   }
+
+  # Leer la clave de API, y SOLO la del proveedor que usa. Con "lexico" no se
+  # genera este bloque: la funcion no puede leer ningun secreto. `dynamic` crea
+  # el bloque 0 o 1 veces, segun la lista del for_each.
+  dynamic "statement" {
+    for_each = var.proveedor_analisis == "lexico" ? [] : [var.proveedor_analisis]
+    content {
+      sid       = "LeerSuClave"
+      effect    = "Allow"
+      actions   = ["secretsmanager:GetSecretValue"]
+      resources = [aws_secretsmanager_secret.clave_llm[statement.value].arn]
+    }
+  }
 }
 
 resource "aws_iam_role_policy" "analizador" {
@@ -143,23 +203,38 @@ resource "aws_lambda_function" "analizador" {
   handler = "manejador.handler"
 
   # arm64 son procesadores Graviton, disenyados por AWS: en torno a un 20% mas
-  # baratos por milisegundo que x86. Se puede elegir porque el codigo es Python
-  # puro; con librerias compiladas habria que compilarlas para arm.
+  # baratos por milisegundo que x86. Las librerias compiladas de la capa estan
+  # descargadas para esta arquitectura (ver empaquetar.py).
   architectures = ["arm64"]
 
-  # 128 MB es el minimo, y sobra: analizar un texto corto es trabajo de
-  # milisegundos. En Lambda la memoria tambien reparte la CPU, asi que subirla
-  # solo tendria sentido si la funcion fuera lenta.
-  memory_size = 128
+  layers = [aws_lambda_layer_version.dependencias.arn]
 
-  # 30 segundos. Este valor esta atado al visibility timeout de la cola (180 s
-  # en cola.tf): AWS recomienda que la cola sea SEIS veces este numero. Si se
-  # sube uno, hay que subir el otro.
-  timeout = 30
+  # 256 MB. Con 128 sobraba para el lexico (usaba 93 MB), pero los SDK y
+  # pydantic ocupan bastante mas al cargarse. En Lambda la memoria tambien
+  # reparte la CPU: con el doble, el arranque en frio es mas rapido.
+  memory_size = 256
+
+  # -------------------------------------------------------------------------
+  # 120 segundos, y una cadena de numeros que tienen que cuadrar
+  # -------------------------------------------------------------------------
+  #   Cada llamada a la IA:   10 s como maximo, y 1 reintento   = 20 s
+  #   Lote de 5 resenyas:     5 x 20 s                         = 100 s
+  #   Timeout de la funcion:  por encima, con margen           = 120 s
+  #   Visibility timeout:     6 x 120 s (regla de AWS)          = 720 s (cola.tf)
+  #
+  # Si se cambia uno de estos numeros, hay que revisar los demas.
+  # -------------------------------------------------------------------------
+  timeout = 120
 
   environment {
     variables = {
       TOPIC_ARN = aws_sns_topic.alertas.arn
+
+      # Quien analiza. Solo el NOMBRE del secreto viaja aqui, nunca la clave:
+      # la funcion la pide a Secrets Manager al ejecutarse.
+      PROVEEDOR_ANALISIS = var.proveedor_analisis
+      MODELO             = var.proveedor_analisis == "lexico" ? "" : local.modelos[var.proveedor_analisis]
+      SECRETO_ID         = var.proveedor_analisis == "lexico" ? "" : aws_secretsmanager_secret.clave_llm[var.proveedor_analisis].name
     }
   }
 
@@ -187,9 +262,10 @@ resource "aws_lambda_event_source_mapping" "cola_a_analizador" {
   # El interruptor general tambien corta aqui. Ver apagado.tf.
   enabled = var.flujo_activo
 
-  # Hasta 10 mensajes por invocacion. Diez resenyas en una llamada cuestan lo
-  # mismo en arranque que una.
-  batch_size = 10
+  # Hasta 5 mensajes por invocacion. Eran 10 con el lexico, que tarda
+  # milisegundos; con la IA cada resenya puede tardar hasta 20 s, y 10 no
+  # cabrian en el timeout de la funcion (ver el calculo en el paso 5).
+  batch_size = 5
 
   # Activa la respuesta por lotes parcial que devuelve handler(). Sin esta
   # linea, AWS ignora la lista de fallidos y reintenta el lote entero.

@@ -92,11 +92,22 @@ UMBRAL_POSITIVO = 2
 
 @dataclass
 class Resultado:
-    puntuacion: float
+    # Solo el lexico da una puntuacion numerica. Un LLM no suma pesos: la deja en None.
+    puntuacion: float | None
     sentimiento: str  # NEGATIVO, NEUTRO o POSITIVO
-    # Que palabras contaron y cuanto. Van en el correo: una alerta que explica
+    # Que palabras o frases contaron. Van en el correo: una alerta que explica
     # por que salto se revisa en segundos; una que no, obliga a adivinar.
     senales: list[str] = field(default_factory=list)
+    # Quien hizo el analisis: "lexico", o el modelo de IA ("claude-opus-5"...).
+    motor: str = "lexico"
+    # Solo con IA: una frase que explica la clasificacion, y lo urgente que es
+    # atender al cliente (ALTA, MEDIA o BAJA). El lexico no sabe hacer ninguna
+    # de las dos cosas.
+    explicacion: str | None = None
+    urgencia: str | None = None
+    # Solo con IA: cuantos tokens consumio la llamada, para calcular el coste.
+    tokens_entrada: int | None = None
+    tokens_salida: int | None = None
 
 
 def normalizar(palabra: str) -> str:

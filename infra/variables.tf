@@ -66,26 +66,65 @@ variable "email_operaciones" {
   sensitive   = true
 }
 
-variable "umbral_calificacion" {
+# ---------------------------------------------------------------------------
+# El analisis con IA (Fase 7)
+# ---------------------------------------------------------------------------
+
+variable "proveedor_analisis" {
   description = <<-EOT
-    Calificacion maxima que se considera "sospechosa" y se manda a analizar.
+    Quien analiza el texto de las resenyas:
 
-    Es el filtro BARATO, el que mira el sobre sin abrir la carta. Se pone en 3 y
-    no en 2 a proposito: una resenya de 3 estrellas con un texto furioso deberia
-    llegar al analisis de sentimiento, y filtrar por 2 la dejaria fuera para
-    siempre. Quien decide de verdad si es negativa es la Lambda, leyendo el
-    texto.
+      lexico      el analizador propio de la Fase 4. Sin IA, sin claves, sin coste.
+      anthropic   Claude, con la clave guardada en Secrets Manager.
+      openai      GPT, con la clave guardada en Secrets Manager.
 
-    Subirlo a 5 haria pasar TODAS las resenyas por el analisis: mas cobertura,
-    mas coste. Bajarlo a 1 ahorraria llamadas y perderia casos.
+    Por defecto "lexico", para que el proyecto funcione recien clonado, antes de
+    que nadie haya guardado ninguna clave. Si se elige un proveedor y su clave
+    falta o falla, la Lambda vuelve al lexico y salta una alarma.
   EOT
-  type        = number
-  default     = 3
+  type        = string
+  default     = "lexico"
 
   validation {
-    condition     = var.umbral_calificacion >= 1 && var.umbral_calificacion <= 5
-    error_message = "La calificacion va de 1 a 5."
+    condition     = var.proveedor_analisis == "lexico" || contains(var.proveedores_llm, var.proveedor_analisis)
+    error_message = "Tiene que ser 'lexico' o uno de los proveedores de proveedores_llm."
   }
+}
+
+variable "proveedores_llm" {
+  description = <<-EOT
+    Proveedores para los que se crea un secreto donde guardar la clave. Cada
+    secreto cuesta 0,40 $ al mes, exista valor dentro o no. Tener los dos
+    permite cambiar de proveedor sin volver a guardar ninguna clave.
+  EOT
+  type        = set(string)
+  default     = ["anthropic", "openai"]
+
+  validation {
+    condition     = alltrue([for p in var.proveedores_llm : contains(["anthropic", "openai"], p)])
+    error_message = "Solo se admiten 'anthropic' y 'openai'."
+  }
+}
+
+variable "modelo_anthropic" {
+  description = <<-EOT
+    Modelo de Claude. Por defecto el recomendado, claude-opus-5 (5 $ / 25 $ por
+    millon de tokens de entrada / salida). Mas baratos: claude-sonnet-5 (2 $ / 10 $)
+    o claude-haiku-4-5 (1 $ / 5 $). Elegir uno mas barato es una decision de coste
+    frente a calidad: la comparadora (src/lambda/comparar.py) ayuda a tomarla.
+  EOT
+  type        = string
+  default     = "claude-opus-5"
+}
+
+variable "modelo_openai" {
+  description = <<-EOT
+    Modelo de OpenAI. Por defecto gpt-5.6-sol (4 $ / 20 $), de gama parecida a
+    claude-opus-5, para que la comparacion entre los dos sea justa. Mas baratos:
+    gpt-5.6-terra (2 $ / 12 $) o gpt-5.6-luna (0,20 $ / 1,20 $).
+  EOT
+  type        = string
+  default     = "gpt-5.6-sol"
 }
 
 variable "log_retention_days" {

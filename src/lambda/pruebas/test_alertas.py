@@ -62,6 +62,36 @@ class DecidirSiSeAvisa(unittest.TestCase):
         self.assertFalse(self.decidir(3, "Cumple su funcion.")[0])
 
 
+class LaUrgenciaDeLaIA(unittest.TestCase):
+
+    def test_urgencia_alta_avisa_aunque_el_texto_no_sea_negativo(self):
+        from analizador_llm import a_resultado
+        resenya = extraer_resenya(registro_sqs(5, "Me encanta, pero me habeis cobrado dos veces"))
+        resultado = a_resultado({"sentimiento": "POSITIVO", "urgencia": "ALTA",
+                                 "explicacion": "Cobro duplicado.", "fragmentos": []}, "claude-opus-5")
+        alerta, motivo = requiere_alerta(resenya, resultado)
+        self.assertTrue(alerta)
+        self.assertIn("urgencia alta", motivo)
+
+    def test_el_correo_de_la_ia_dice_urgencia_explicacion_y_modelo(self):
+        from analizador_llm import a_resultado
+        resenya = extraer_resenya(registro_sqs(2, "Llego roto"))
+        resultado = a_resultado({"sentimiento": "NEGATIVO", "urgencia": "MEDIA",
+                                 "explicacion": "Producto danado.", "fragmentos": ["Llego roto"]}, "gpt-5.6-sol")
+        asunto, cuerpo = componer_mensaje(resenya, resultado, "el texto es negativo")
+        self.assertIn("[MEDIA]", asunto)
+        self.assertIn("Explicación:   Producto danado.", cuerpo)
+        self.assertIn("Analizado con: gpt-5.6-sol", cuerpo)
+        self.assertNotIn("puntuación", cuerpo)       # la IA no da puntuacion
+
+    def test_el_correo_del_lexico_no_tiene_lineas_de_ia(self):
+        resenya = extraer_resenya(registro_sqs(2, "Llego roto"))
+        asunto, cuerpo = componer_mensaje(resenya, analizar("Llego roto"), "el texto es negativo")
+        self.assertNotIn("[", asunto)
+        self.assertNotIn("Urgencia:", cuerpo)
+        self.assertIn("Analizado con: lexico", cuerpo)
+
+
 class ComponerElCorreo(unittest.TestCase):
 
     def test_asunto_cabe_en_el_limite_de_sns_y_sin_saltos(self):

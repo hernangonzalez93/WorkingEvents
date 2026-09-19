@@ -51,12 +51,17 @@ def requiere_alerta(resenya: Resenya, resultado: Resultado) -> tuple[bool, str]:
     if resultado.sentimiento == "NEGATIVO":
         return True, "el texto es negativo"
 
+    # Solo lo detecta la IA: una resenya puede sonar contenta y aun asi pedir
+    # ayuda urgente ("me encanta, pero me habeis cobrado dos veces").
+    if resultado.urgencia == "ALTA":
+        return True, "urgencia alta según el análisis"
+
     # Una estrella casi nunca es un elogio. Si el texto no contiene nada que el
-    # lexico reconozca ("Llego el martes."), la nota por si sola basta.
+    # analisis reconozca ("Llego el martes."), la nota por si sola basta.
     if resenya.calificacion <= 1:
         return True, "calificación mínima (1 estrella)"
 
-    return False, "ni el texto es negativo ni la calificación es la mínima"
+    return False, "ni el texto es negativo, ni es urgente, ni la calificación es la mínima"
 
 
 def componer_mensaje(resenya: Resenya, resultado: Resultado, motivo: str) -> tuple[str, str]:
@@ -64,7 +69,19 @@ def componer_mensaje(resenya: Resenya, resultado: Resultado, motivo: str) -> tup
     # SNS exige que el asunto tenga menos de 100 caracteres y ningun salto de
     # linea. Ademas va sin tildes ni enyes, para no depender de como lo muestre
     # cada cliente de correo. El cuerpo no tiene esas limitaciones.
-    asunto = f"ALERTA resenya {resenya.calificacion}/5 - {resenya.id}"[:99]
+    urgencia = f" [{resultado.urgencia}]" if resultado.urgencia else ""
+    asunto = f"ALERTA{urgencia} resenya {resenya.calificacion}/5 - {resenya.id}"[:99]
+
+    sentimiento = resultado.sentimiento
+    if resultado.puntuacion is not None:
+        sentimiento += f" (puntuación {resultado.puntuacion:+g})"
+
+    # Las lineas de la IA solo aparecen cuando hay algo que poner.
+    extra = ""
+    if resultado.urgencia:
+        extra += f"Urgencia:      {resultado.urgencia}\n"
+    if resultado.explicacion:
+        extra += f"Explicación:   {resultado.explicacion}\n"
 
     senales = ", ".join(resultado.senales) or "ninguna palabra reconocida"
 
@@ -72,8 +89,8 @@ def componer_mensaje(resenya: Resenya, resultado: Resultado, motivo: str) -> tup
 
 Motivo:        {motivo}
 Calificación:  {resenya.calificacion}/5
-Sentimiento:   {resultado.sentimiento} (puntuación {resultado.puntuacion:+g})
-Señales:       {senales}
+Sentimiento:   {sentimiento}
+{extra}Señales:       {senales}
 
 Comentario del cliente:
   "{resenya.comentario}"
@@ -81,6 +98,7 @@ Comentario del cliente:
 Contactar a:   {resenya.email}
 
 --
+Analizado con: {resultado.motor}
 Reseña:        {resenya.id}
 Evento:        {resenya.event_id}
 Recibida:      {resenya.recibida} (UTC)

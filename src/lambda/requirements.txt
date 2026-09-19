@@ -1,0 +1,7 @@
+# Dependencias de la Lambda. NO se instalan en tu equipo: empaquetar.py las
+# descarga compiladas para Linux ARM (el procesador de la Lambda) y las mete en
+# una capa. Versiones fijas para que dos empaquetados den lo mismo.
+#
+# boto3 no esta aqui a proposito: ya viene incluido en el entorno de Lambda.
+anthropic==1.7.0
+openai==3.16.2

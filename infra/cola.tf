@@ -47,10 +47,15 @@ resource "aws_sqs_queue" "resenyas" {
 
   # Cuanto tiempo queda invisible un mensaje mientras se procesa. La regla que
   # recomienda AWS es SEIS VECES el timeout de la Lambda. Si fuera menor, el
-  # mensaje reaparaceria mientras todavia se esta procesando y una segunda
+  # mensaje reapareceria mientras todavia se esta procesando y una segunda
   # invocacion haria el mismo trabajo: correo duplicado y coste duplicado.
-  # La Lambda tendra 30 s de timeout, asi que 180 s.
-  visibility_timeout_seconds = 180
+  #
+  # Fue 180 s (6 x 30) mientras el analisis era el lexico. Con la IA, la Lambda
+  # tiene 120 s de timeout (ver el calculo en lambda.tf), asi que 720 s.
+  #
+  # Efecto secundario: un mensaje que falla tarda ahora 12 minutos, y no 3, en
+  # reintentarse, y unos 36 en llegar a la DLQ.
+  visibility_timeout_seconds = 720
 
   # 4 dias. Si nadie lo recoge en ese plazo, algo esta roto de todas formas.
   message_retention_seconds = 345600
@@ -95,7 +100,7 @@ data "aws_iam_policy_document" "cola_acepta_eventbridge" {
     condition {
       test     = "ArnEquals"
       variable = "aws:SourceArn"
-      values   = [aws_cloudwatch_event_rule.resenyas_sospechosas.arn]
+      values   = [aws_cloudwatch_event_rule.resenyas.arn]
     }
   }
 }

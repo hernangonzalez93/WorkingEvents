@@ -54,7 +54,7 @@ en_la_cola = [
     registro("msg-C", '{"esto": "no es una resenya"}'),
 ]
 
-print("PASO 1-2 | El portero pide mensajes a SQS y recibe 3. SQS los vuelve INVISIBLES (180 s).")
+print("PASO 1-2 | El portero pide mensajes a SQS y recibe 3. SQS los vuelve INVISIBLES.")
 for r in en_la_cola:
     print(f"          {r['messageId']}")
 
@@ -70,7 +70,7 @@ fallidos = {f["itemIdentifier"] for f in respuesta["batchItemFailures"]}
 print("\nPASO 6   | El portero lee esa respuesta y actua sobre SQS:")
 for r in en_la_cola:
     if r["messageId"] in fallidos:
-        print(f"          {r['messageId']}: NO lo borra -> reaparecera en 180 s "
-              "(al tercer fallo, SQS lo manda a la DLQ)")
+        print(f"          {r['messageId']}: NO lo borra -> reaparecera al acabar el "
+              "visibility timeout (al tercer fallo, SQS lo manda a la DLQ)")
     else:
         print(f"          {r['messageId']}: DeleteMessage -> desaparece de la cola")

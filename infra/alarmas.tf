@@ -14,14 +14,15 @@
 #            (no hay datos para decidir). Avisa al CAMBIAR de estado, no en cada
 #            comprobacion: un correo al saltar y otro al volver a OK.
 #
-# Hay tres alarmas, cada una para un tipo de fallo que las otras no ven:
+# Hay cuatro alarmas, cada una para un tipo de fallo que las otras no ven:
 #
 #   1. Mensajes que fallan  (metrica sacada de los LOGS)   -> aviso inmediato
 #   2. Errores de la Lambda (metrica de AWS/Lambda)        -> la funcion entera revienta
 #   3. Mensajes en la DLQ   (metrica de AWS/SQS)           -> la ultima red: hay que actuar
+#   4. Analisis degradado   (metrica sacada de los LOGS)   -> la IA fallo y se uso el lexico
 #
 # Coste: CloudWatch regala cada mes 10 alarmas y 10 metricas personalizadas.
-# Aqui hay 3 alarmas y 1 metrica personalizada, asi que el coste es cero.
+# Aqui hay 4 alarmas y 2 metricas personalizadas, asi que el coste es cero.
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -183,3 +184,47 @@ resource "aws_cloudwatch_metric_alarm" "dlq_con_mensajes" {
   alarm_actions = [aws_sns_topic.operaciones.arn]
   ok_actions    = [aws_sns_topic.operaciones.arn]
 }
+
+# ---------------------------------------------------------------------------
+# 4. Analisis degradado: la IA fallo y se analizo con el lexico (Fase 7)
+# ---------------------------------------------------------------------------
+# Si el proveedor de IA falla (caido, clave caducada, secreto vacio, modelo que
+# no existe...), la Lambda no deja de analizar: vuelve al lexico. Es mejor que
+# no analizar, pero PEOR que lo que se configuro, y alguien tiene que saberlo.
+#
+# Es el mismo patron que la alarma 1: el manejador escribe "Analisis degradado"
+# y un filtro lo convierte en metrica. El texto tiene que coincidir EXACTAMENTE
+# con el de manejador.py.
+# ---------------------------------------------------------------------------
+
+resource "aws_cloudwatch_log_metric_filter" "analisis_degradado" {
+  name           = "${var.project}-analisis-degradado"
+  log_group_name = aws_cloudwatch_log_group.analizador.name
+  pattern        = "\"Analisis degradado\""
+
+  metric_transformation {
+    name      = "AnalisisDegradado"
+    namespace = "WorkingEvents"
+    value     = "1"
+    unit      = "Count"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "analisis_degradado" {
+  alarm_name        = "${var.project}-analisis-degradado"
+  alarm_description = "El proveedor de IA ha fallado y las resenyas se estan analizando con el lexico. Buscar 'Analisis degradado' en los logs: dice el tipo de error (clave, modelo, secreto vacio...)."
+
+  namespace   = "WorkingEvents"
+  metric_name = "AnalisisDegradado"
+  statistic   = "Sum"
+
+  period              = 60
+  evaluation_periods  = 1
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+
+  alarm_actions = [aws_sns_topic.operaciones.arn]
+  ok_actions    = [aws_sns_topic.operaciones.arn]
+}
+

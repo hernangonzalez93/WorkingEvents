@@ -140,7 +140,7 @@ data "aws_iam_policy_document" "apagar" {
 
     # ESA regla, y ninguna otra. Un rol que solo sabe hacer una cosa sobre un
     # sitio concreto es un rol que no puede sorprenderte.
-    resources = [aws_cloudwatch_event_rule.resenyas_sospechosas.arn]
+    resources = [aws_cloudwatch_event_rule.resenyas.arn]
   }
 }
 
@@ -175,7 +175,7 @@ resource "aws_scheduler_schedule" "apagado" {
     role_arn = aws_iam_role.planificador[0].arn
 
     input = jsonencode({
-      Name         = aws_cloudwatch_event_rule.resenyas_sospechosas.name
+      Name         = aws_cloudwatch_event_rule.resenyas.name
       EventBusName = aws_cloudwatch_event_bus.principal.name
     })
   }
